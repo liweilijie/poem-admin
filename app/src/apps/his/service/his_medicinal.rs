@@ -74,7 +74,7 @@ pub async fn check_data_is_exist(category_id: u32, name: String, validity: Date,
                 .add(medicinal::Column::CategoryId.eq(category_id))
                 .add(medicinal::Column::Name.eq(name))
                 .add(medicinal::Column::Validity.eq(validity))
-                .add(medicinal::Column::Name.eq(user_id))
+                .add(medicinal::Column::CreatedBy.eq(user_id))
             )
         .count(db).await?;
     Ok(count > 0)
