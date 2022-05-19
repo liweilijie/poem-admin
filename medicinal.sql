@@ -44,3 +44,8 @@ insert  into `his_category`(`name`, `created_by`) values
                                                       ('测试类目1', '037CB9TOL43PKHVYD0S5DHLFS'),
                                                       ('测试类目2', '037CB9TOL43PKHVYD0S5DHLFS'),
                                                       ('测试类目3', '037CB9TOL43PKHVYD0S5DHLFS');
+
+insert into `his_medicinal`(`category_id`,`name`,`batch_number`,`spec`,`count`,`validity`,`status`,`created_by`) values
+                                                                                                                     (1, 'N98口罩', '20200914', '2020-01k023', '800只', '2022-10-11', 0, '037CB9TOL43PKHVYD0S5DHLFS'),
+                                                                                                                     (2, '普通口罩', '20220914', '2020-01k023', '900只', '2022-12-11', 0, '037CB9TOL43PKHVYD0S5DHLFS'),
+                                                                                                                     (3, '绑带', '20230914', '2023-01k023', '90片', '2022-07-10', 0, '037CB9TOL43PKHVYD0S5DHLFS');

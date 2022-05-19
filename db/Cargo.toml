@@ -29,3 +29,9 @@ default = ["postgres", "mysql", "sqlite"]
 mysql = ["sea-orm/sqlx-mysql"]
 postgres = ["sea-orm/sqlx-postgres"]
 sqlite = ["sea-orm/sqlx-sqlite"]
+
+
+[dev-dependencies]
+tokio-test = "*"
+tokio = { version = "1.17.0", features = ["full"] }
+tracing-subscriber = { version = "0.3.2", features = ["time", "local-time", "env-filter"] }

@@ -4,6 +4,7 @@ use poem::{endpoint::StaticFilesEndpoint, get, post, EndpointExt, Route};
 use crate::middleware;
 
 pub mod system;
+pub mod his;
 pub mod test;
 
 pub fn api() -> Route {
@@ -15,6 +16,14 @@ pub fn api() -> Route {
         .nest(
             "/system",
             system::system_api()
+                .with(middleware::ApiAuth)
+                .with_if(CFG.log.enable_oper_log, middleware::OperLog)
+                .with_if(CFG.server.cache_time > 0, middleware::Cache)
+                .with(middleware::Ctx),
+        )
+        .nest(
+            "/his",
+            his::his_api()
                 .with(middleware::ApiAuth)
                 .with_if(CFG.log.enable_oper_log, middleware::OperLog)
                 .with_if(CFG.server.cache_time > 0, middleware::Cache)
