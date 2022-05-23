@@ -9,15 +9,16 @@ use db::{
 };
 use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition};
 use sea_orm::prelude::Date;
+use db::his::entities::category;
 
 /// get_list 获取列表
 /// page_params 分页参数
 /// db 数据库连接 使用db.0
-pub async fn get_sort_list(db: &DatabaseConnection, page_params: PageParams, req: SearchReq) -> Result<ListData<medicinal::Model>> {
+pub async fn get_sort_list(db: &DatabaseConnection, page_params: PageParams, req: SearchReq) -> Result<ListData<db::his::models::medicinal::Resp>> {
     let page_num = page_params.page_num.unwrap_or(1);
     let page_per_size = page_params.page_size.unwrap_or(10);
     //  生成查询条件
-    let mut s = Medicinal::find();
+    let mut s = Medicinal::find().find_also_related(Category);
 
     if let Some(x) = req.name {
         if !x.is_empty() {
@@ -54,14 +55,38 @@ pub async fn get_sort_list(db: &DatabaseConnection, page_params: PageParams, req
     // 获取全部数据条数
     let total = s.clone().count(db).await?;
     // 分页获取数据
-    let paginator = s.order_by_asc(medicinal::Column::Id).paginate(db, page_per_size);
+    let paginator = s.order_by_asc(medicinal::Column::Validity).paginate(db, page_per_size);
     let total_pages = paginator.num_pages().await?;
     let list = paginator.fetch_page(page_num - 1).await?;
+
+    let mut list_resp: Vec<Resp> = Vec::new();
+    for item in list.iter() {
+        println!("{:?}", item);
+        if item.1.is_none() {
+            println!("error data: {:?}", item);
+            continue
+        }
+
+        let resp = Resp {
+            id: item.0.id,
+            category_id: item.0.category_id,
+            category_name: item.1.as_ref().unwrap().name.to_owned(),
+            name: item.0.name.clone(),
+            batch_number: item.0.batch_number.clone(),
+            spec: item.0.spec.clone(),
+            count: item.0.count.clone(),
+            status: item.0.status.clone(),
+            validity: item.0.validity,
+            created_at: item.0.created_at
+        };
+
+        list_resp.push(resp);
+    }
 
     let res = ListData {
         total,
         total_pages,
-        list,
+        list: list_resp,
         page_num,
     };
     Ok(res)
@@ -152,7 +177,7 @@ pub async fn edit(db: &DatabaseConnection, req: EditReq, user_id: String) -> Res
 /// get_user_by_id 获取用户Id获取用户
 /// db 数据库连接 使用db.0
 pub async fn get_by_id(db: &DatabaseConnection, search_req: SearchReq) -> Result<Resp> {
-    let mut s = Medicinal::find();
+    let mut s = Medicinal::find().find_also_related(Category);
     s = s.filter(medicinal::Column::DeletedAt.is_null());
     //
     if let Some(x) = search_req.id {
@@ -161,10 +186,28 @@ pub async fn get_by_id(db: &DatabaseConnection, search_req: SearchReq) -> Result
         return Err(anyhow!("请求参数错误"));
     }
 
-    let res = match s.into_model::<Resp>().one(db).await? {
+    let res = match s.one(db).await? {
+        // let res = match s.into_model::<_,_>().one(db).await? {
         Some(m) => m,
         None => return Err(anyhow!("数据不存在")),
     };
+
+    println!("{:?}", res);
+
+    let res = Resp {
+        id: res.0.id,
+        category_id: res.0.category_id,
+        category_name: res.1.as_ref().unwrap().name.to_owned(),
+        name: res.0.name.clone(),
+        batch_number: res.0.batch_number,
+        spec: res.0.spec,
+        count: res.0.count,
+        status: res.0.status,
+        validity: res.0.validity,
+        created_at: res.0.created_at
+    };
+
+    println!("2222: {:?}", res);
 
     // let result: Resp =
     // serde_json::from_value(serde_json::json!(res))?;

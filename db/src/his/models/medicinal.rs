@@ -43,11 +43,12 @@ pub struct EditReq {
 pub struct Resp {
     pub id: u32,
     pub category_id: u32,
+    pub category_name: String,
     pub name: String,
     pub batch_number: String,
     pub spec: String,
     pub count: String,
     pub status: String,
     pub validity: Date,
-    pub created_at: DateTime,
+    pub created_at: Option<DateTime>,
 }
