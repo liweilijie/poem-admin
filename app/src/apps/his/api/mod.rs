@@ -18,6 +18,7 @@ fn medicinal_api() -> Route {
         .at("/edit", put(his_medicinal::edit)) // 更新
         // .at("/delete", delete(sys_post::delete)) //软删除
         .at("/delete", delete(his_medicinal::delete)) // 硬删除
+        .at("/upload", post(his_medicinal::upload)) // 硬删除
 }
 
 fn category_api() -> Route {

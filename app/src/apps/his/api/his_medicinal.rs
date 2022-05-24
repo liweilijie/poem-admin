@@ -11,6 +11,8 @@ use poem::{
     handler,
     web::{Json, Query},
 };
+use poem::web::Multipart;
+use tracing::debug;
 
 use super::super::service;
 use crate::utils::jwt::Claims;
@@ -30,6 +32,7 @@ pub async fn get_sort_list(Query(page_params): Query<PageParams>, Query(req): Qu
 /// add 添加
 #[handler]
 pub async fn add(Json(req): Json<AddReq>, user: Claims) -> Res<String> {
+    debug!("add req:{:?}", req);
     let db = DB.get_or_init(db_conn).await;
     let res = service::his_medicinal::add(db, req, user.id).await;
     match res {
@@ -81,3 +84,22 @@ pub async fn get_all() -> Res<Vec<Resp>> {
         Err(e) => Res::with_err(&e.to_string()),
     }
 }
+
+/// upload 上传文件
+#[handler]
+pub async fn upload(mut multipart: Multipart) -> &'static str {
+    while let Ok(Some(field)) = multipart.next_field().await {
+        let name = field.name().map(ToString::to_string);
+        let file_name = field.file_name().map(ToString::to_string);
+        if let Ok(bytes) = field.bytes().await {
+            println!(
+                "name={:?} filename={:?} length={}",
+                name,
+                file_name,
+                bytes.len()
+            );
+        }
+    }
+    "File uploaded successfully!"
+}
+

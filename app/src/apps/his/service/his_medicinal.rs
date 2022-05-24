@@ -9,12 +9,14 @@ use db::{
 };
 use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition};
 use sea_orm::prelude::Date;
+use tracing::debug;
 use db::his::entities::category;
 
 /// get_list 获取列表
 /// page_params 分页参数
 /// db 数据库连接 使用db.0
 pub async fn get_sort_list(db: &DatabaseConnection, page_params: PageParams, req: SearchReq) -> Result<ListData<db::his::models::medicinal::Resp>> {
+    debug!("req:{:?}", req);
     let page_num = page_params.page_num.unwrap_or(1);
     let page_per_size = page_params.page_size.unwrap_or(10);
     //  生成查询条件
@@ -111,7 +113,6 @@ pub async fn eidt_check_data_is_exist(id: u32, db: &DatabaseConnection) -> Resul
 }
 
 /// add 添加
-
 pub async fn add(db: &DatabaseConnection, req: AddReq, user_id: String) -> Result<String> {
     //  检查字典类型是否存在
     if check_data_is_exist(req.clone().category_id, req.clone().name, req.clone().validity, user_id.clone(), db).await? {
@@ -121,6 +122,7 @@ pub async fn add(db: &DatabaseConnection, req: AddReq, user_id: String) -> Resul
     let now: NaiveDateTime = Local::now().naive_local();
     let med = medicinal::ActiveModel {
         name: Set(req.name),
+        category_id: Set(req.category_id),
         batch_number: Set(req.batch_number.unwrap_or_else(|| "".to_string())),
         spec: Set(req.spec.unwrap_or_else(|| "".to_string())),
         count: Set(req.count.unwrap_or_else(|| "".to_string())),
