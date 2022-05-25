@@ -9,8 +9,9 @@ use db::{
 };
 use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition};
 use sea_orm::prelude::Date;
-use tracing::debug;
+use tracing::{debug, error};
 use db::his::entities::category;
+use db::his::models::medicinal::ImportData;
 
 /// get_list 获取列表
 /// page_params 分页参数
@@ -128,6 +129,35 @@ pub async fn add(db: &DatabaseConnection, req: AddReq, user_id: String) -> Resul
         count: Set(req.count.unwrap_or_else(|| "".to_string())),
         validity: Set(req.validity),
         status: Set(req.status.unwrap_or_else(|| "".to_string())),
+        created_by: Set(user_id),
+        created_at: Set(Some(now)),
+        ..Default::default()
+    };
+    let txn = db.begin().await?;
+    Medicinal::insert(med).exec(&txn).await?;
+    txn.commit().await?;
+    Ok("添加成功".to_string())
+}
+
+
+/// import 添加
+pub async fn import(db: &DatabaseConnection, data: &ImportData, user_id: String, category_id: u32) -> Result<String> {
+    //  检查字典类型是否存在
+    if check_data_is_exist(category_id, data.clone().name, data.clone().validity, user_id.clone(), db).await? {
+        error!("{:?} {} {} 已经存在", data, user_id, category_id);
+        return Err(anyhow!("数据已存在"));
+    }
+
+    let now: NaiveDateTime = Local::now().naive_local();
+    let data = data.clone();
+    let med = medicinal::ActiveModel {
+        name: Set(data.name.clone()),
+        category_id: Set(category_id),
+        batch_number: Set(data.batch_number.unwrap_or_else(|| "".to_string())),
+        spec: Set(data.spec.unwrap_or_else(|| "".to_string())),
+        count: Set(data.count.unwrap_or_else(|| "".to_string())),
+        validity: Set(data.validity),
+        status: Set(data.status.unwrap_or_else(|| "".to_string())),
         created_by: Set(user_id),
         created_at: Set(Some(now)),
         ..Default::default()

@@ -22,6 +22,16 @@ pub struct AddReq {
     pub validity: Date,
 }
 
+#[derive(Deserialize, Clone, Debug)]
+pub struct ImportData {
+    pub name: String,
+    pub batch_number: Option<String>,
+    pub spec: Option<String>,
+    pub count: Option<String>,
+    pub status: Option<String>,
+    pub validity: Date,
+}
+
 #[derive(Deserialize)]
 pub struct DeleteReq {
     pub ids: Vec<u32>,
