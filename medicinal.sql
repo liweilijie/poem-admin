@@ -20,6 +20,7 @@ CREATE TABLE `his_medicinal` (
 `updated_by` varchar(32) NULL,
 `created_at` datetime NULL,
 `updated_at` datetime NULL,
+`notify_at` datetime NULL,
 `deleted_at` datetime NULL,
 PRIMARY KEY (`id`) ,
 UNIQUE INDEX `unique_cate_name` (`category_id` ASC, `name` ASC, `created_by` ASC) USING BTREE,
@@ -49,3 +50,5 @@ insert into `his_medicinal`(`category_id`,`name`,`batch_number`,`spec`,`count`,`
                                                                                                                      (1, 'N98口罩', '20200914', '2020-01k023', '800只', '2022-10-11', 0, '037CB9TOL43PKHVYD0S5DHLFS'),
                                                                                                                      (2, '普通口罩', '20220914', '2020-01k023', '900只', '2022-12-11', 0, '037CB9TOL43PKHVYD0S5DHLFS'),
                                                                                                                      (3, '绑带', '20230914', '2023-01k023', '90片', '2022-07-10', 0, '037CB9TOL43PKHVYD0S5DHLFS');
+
+alter table his_medicinal add notify_at datetime null;

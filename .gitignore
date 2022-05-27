@@ -2,6 +2,7 @@
 /data/log
 /data/_web
 /data/_upload
+/data/upload
 .idea
 *.http
 .git

@@ -8,7 +8,7 @@ use db::{
     },
 };
 use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition};
-use sea_orm::prelude::Date;
+use sea_orm::prelude::{Date, DateTime};
 use tracing::{debug, error};
 use db::his::entities::category;
 use db::his::models::medicinal::ImportData;
@@ -298,3 +298,99 @@ pub async fn delete_medicinal_by_user_id<C>(db: &C, user_ids: Vec<String>) -> Re
 //     Medicinal::insert_many(inser_data).exec(db).await?;
 //     Ok(())
 // }
+
+
+//  过期数据筛查
+// 已经过期: 小于等于今天的数据表示已经过期 status: 0
+// 一个月： 今天到一个月之内的数据 status: 1
+// 三个月：今天到三个月之内的数据 status: 3
+// 正常数据： 其他数据正常 status: 9
+pub async fn medicinal_validity_scan(db: &DatabaseConnection) -> Result<()> {
+    // UPDATE `fruit` SET `cake_id` = 1 WHERE `fruit`.`name` LIKE '%Apple%'
+    // Fruit::update_many()
+    //     .col_expr(fruit::Column::CakeId, Expr::value(1))
+    //     .filter(fruit::Column::Name.contains("Apple"))
+    //     .exec(db)
+    //     .await?;
+
+    // 已经过期的数据
+    Medicinal::update_many()
+        .col_expr(medicinal::Column::Status, Expr::value("0"))
+        .filter(medicinal::Column::Validity.lte(Local::now().naive_local()))
+        .exec(db)
+        .await?;
+
+    // 一个月
+    let one_month = Local::now().checked_add_signed(chrono::Duration::days(30)).unwrap().naive_local();
+    let three_months = Local::now().checked_add_signed(chrono::Duration::days(90)).unwrap().naive_local();
+    Medicinal::update_many()
+        .col_expr(medicinal::Column::Status, Expr::value("1"))
+        .filter(medicinal::Column::Validity.gt(Local::now().naive_local()))
+        .filter(medicinal::Column::Validity.lte(one_month))
+        .exec(db)
+        .await?;
+
+    // 三个月
+    Medicinal::update_many()
+        .col_expr(medicinal::Column::Status, Expr::value("3"))
+        .filter(medicinal::Column::Validity.gt(one_month))
+        .filter(medicinal::Column::Validity.lte(three_months))
+        .exec(db)
+        .await?;
+
+    // 三个月以上都正常
+    Medicinal::update_many()
+        .col_expr(medicinal::Column::Status, Expr::value("9"))
+        .filter(medicinal::Column::Validity.gt(three_months))
+        .exec(db)
+        .await?;
+
+    Ok(())
+}
+
+// 批量更新通知时间
+pub async fn update_notify_at(db: &DatabaseConnection, notify_at: DateTime, ids: Vec<u32>) -> Result<()> {
+    Medicinal::update_many()
+        .col_expr(medicinal::Column::NotifyAt, Expr::value(notify_at))
+        .filter(medicinal::Column::Id.is_in(ids))
+        .exec(db)
+        .await?;
+
+    Ok(())
+}
+
+// 获取对应状态的药品数据发送数据
+pub async fn get_lose_validity(db: &DatabaseConnection, status: &str) -> Result<Vec<Resp>> {
+    let list = Medicinal::find().find_also_related(Category)
+        .filter(medicinal::Column::DeletedAt.is_null())
+        .filter(medicinal::Column::Status.eq(status))
+        .filter(medicinal::Column::NotifyAt.lte(chrono::Local::now().naive_local()))
+        .order_by(medicinal::Column::Id, Order::Asc)
+        .all(db)
+        .await?;
+
+    let mut list_resp: Vec<Resp> = Vec::new();
+    for item in list.iter() {
+        println!("{:?}", item);
+        if item.1.is_none() {
+            println!("error data: {:?}", item);
+            continue
+        }
+
+        let resp = Resp {
+            id: item.0.id,
+            category_id: item.0.category_id,
+            category_name: item.1.as_ref().unwrap().name.to_owned(),
+            name: item.0.name.clone(),
+            batch_number: item.0.batch_number.clone(),
+            spec: item.0.spec.clone(),
+            count: item.0.count.clone(),
+            status: item.0.status.clone(),
+            validity: item.0.validity,
+            created_at: item.0.created_at
+        };
+
+        list_resp.push(resp);
+    }
+    Ok(list_resp)
+}

@@ -7,7 +7,8 @@ use db::{
         models::category::{AddReq, DeleteReq, EditReq, Resp, SearchReq},
     },
 };
-use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition, InsertResult};
+use sea_orm::{sea_query::Expr, ColumnTrait, ConnectionTrait, DatabaseConnection, EntityTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, Set, TransactionTrait, Condition};
+use tracing::debug;
 use db::his::entities::medicinal;
 
 /// get_list 获取列表
@@ -147,7 +148,7 @@ pub async fn get_id_or_insert(db: &DatabaseConnection, name: String, user_id: St
             Condition::all()
                 .add(category::Column::DeletedAt.is_null())
                 .add(category::Column::Name.eq(name.clone()))
-                .add(category::Column::CreatedBy.eq(user_id.to_clone()))
+                .add(category::Column::CreatedBy.eq(user_id.clone()))
         )
         .into_model::<Resp>().one(db).await?;
 
@@ -164,10 +165,15 @@ pub async fn get_id_or_insert(db: &DatabaseConnection, name: String, user_id: St
         ..Default::default()
     };
     let txn = db.begin().await?;
-    let res: InsertResult<_> = Category::insert(cate).exec(&txn).await?;
+    let res = Category::insert(cate).exec(&txn).await?;
     txn.commit().await?;
 
-    Ok(res.last_insert_id)
+    debug!("res:{:#?}", res);
+
+    let last_insert_id: u32 = res.last_insert_id.parse()?;
+
+
+    Ok(last_insert_id)
 }
 
 

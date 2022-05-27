@@ -45,7 +45,11 @@ pub async fn add(Json(req): Json<AddReq>, user: Claims) -> Res<String> {
     let db = DB.get_or_init(db_conn).await;
     let res = service::his_medicinal::add(db, req, user.id).await;
     match res {
-        Ok(x) => Res::with_msg(&x),
+        Ok(x) => {
+            // 新增加数据更新一下状态
+            let _ = service::his_medicinal::medicinal_validity_scan(db).await;
+            Res::with_msg(&x)
+        },
         Err(e) => Res::with_err(&e.to_string()),
     }
 }
@@ -67,7 +71,11 @@ pub async fn edit(Json(req): Json<EditReq>, user: Claims) -> Res<String> {
     let db = DB.get_or_init(db_conn).await;
     let res = service::his_medicinal::edit(db, req, user.id).await;
     match res {
-        Ok(x) => Res::with_msg(&x),
+        Ok(x) => {
+            //  编辑数据更新一下状态
+            let _ = service::his_medicinal::medicinal_validity_scan(db).await;
+            Res::with_msg(&x)
+        },
         Err(e) => Res::with_err(&e.to_string()),
     }
 }
@@ -153,52 +161,47 @@ pub async fn import(mut multipart: Multipart, user: Claims) -> Res<String> {
         }
 
         // 读取文件内容
-        let (category, result, total_count, _success_count) = match sc.extension().and_then(|s| s.to_str()) {
-            // 如果是 csv 文件，则解析 csv 文件
-            Some("csv") => match load_csv_file(&to_path).await {
-                Ok(a, b, c, d) => (a, b, c, d),
-                Err(err) => {
-                    error!("{} 文件内容读取失败， error: {:?}", &to_path, err);
-                    Res::with_err(&format!("load csv file error:{}", err))
+        return if let Ok((category, result, total_count, _success_count)) = load_csv_file(&to_path).await {
+            // 将读取到的数据 insert 到数据库中
+            let mut insert_count = 0;
+            if result.len() > 0 && !category.is_empty() {
+                // 先获取 category_id
+                let category_id = match service::his_category::get_id_or_insert(db, category.clone(), user.id.clone()).await {
+                    Ok(id) => id,
+                    Err(e) => {
+                        error!("insert category:{} error:{}", category, e);
+                        return Res::with_err(&format!("insert category:{} error:{}", category, e));
+                    }
+                };
+
+                info!("category_id:{}", category_id);
+
+
+                for value in result.iter() {
+                    debug!("will insert {:#?}", value);
+
+                    service::his_medicinal::import(db, value, user.id.clone(), category_id).await
+                        .map_or_else(
+                            |e| { error!("import {:?} error:{}", value, e) },
+                            |v| {
+                                debug!("success import {:?}:{}", value, v);
+                                insert_count += 1;
+                            },
+                        );
                 }
-            },
-            _ => {
-                return Res::with_err("文件类型错误。");
             }
-        };
 
-        // 将读取到的数据 insert 到数据库中
-        let mut insert_count = 0;
-        if result.len() > 0 && !category.is_empty() {
-            // 先获取 category_id
-            let category_id = match service::his_category::get_id_or_insert(db, category.clone(), user.id.clone()) {
-                Ok(id) => id,
-                Err(e) => {
-                    error!("insert category:{} error:{}", category, e);
-                    return Res::with_err(&format!("insert category:{} error:{}", category, e));
-                }
-            };
-
-            info!("category_id:{}", category_id);
-
-
-            for value in result.iter() {
-                debug!("will insert {:#?}", value);
-
-                service::his_medicinal::import(db, value, user.id.clone(), category_id).await
-                    .map_or_else(
-                        |e| { error!("import {:?} error:{}", value, e) },
-                        |v| {
-                            debug!("success import {:?}:{}", value, v);
-                            insert_count += 1;
-                        },
-                    );
+            // 如果有新插入的数据，则更新一下状态
+            if insert_count > 0 {
+               let _ = service::his_medicinal::medicinal_validity_scan(db).await;
             }
+
+            debug!("import result total_count: {} and insert_count:{}", total_count, insert_count);
+
+            Res::with_msg(&format!("总共有{}条，成功{}条，失败{}条。", total_count, insert_count, total_count - insert_count))
+        } else {
+            Res::with_err("读取文件异常。")
         }
-
-        debug!("import result total_count: {} and insert_count:{}", total_count, insert_count);
-
-        return Res::with_msg(&format!("总共有{}条，成功{}条，失败{}条。", total_count, insert_count, total_count-insert_count));
     }
 
     return Res::with_msg(&"什么也没有处理".to_string());

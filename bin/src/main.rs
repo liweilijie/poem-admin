@@ -19,6 +19,7 @@ use poem::{
 };
 use poem::listener::RustlsCertificate;
 use tracing_subscriber::{fmt, layer::SubscriberExt, EnvFilter, Registry};
+use app::sms::sms;
 
 // 路由日志追踪
 
@@ -56,6 +57,9 @@ fn main() -> Result<(), std::io::Error> {
             // .with(console_layer)
             ;
         tracing::subscriber::set_global_default(logger).unwrap();
+
+        // 启动短信告警后台服务
+        tokio::spawn(sms::sms_schedule());
 
         // apis全局初始化
         utils::ApiUtils::init_all_api().await;

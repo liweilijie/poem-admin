@@ -26,6 +26,7 @@ pub struct Model {
     pub updated_by: Option<String>,
     pub created_at: Option<DateTime>,
     pub updated_at: Option<DateTime>,
+    pub notify_at: Option<DateTime>,
     pub deleted_at: Option<DateTime>,
 }
 
@@ -43,6 +44,7 @@ pub enum Column {
     UpdatedBy,
     CreatedAt,
     UpdatedAt,
+    NotifyAt,
     DeletedAt,
 }
 
@@ -79,6 +81,7 @@ impl ColumnTrait for Column {
             Self::UpdatedBy => ColumnType::String(Some(32u32)).def().null(),
             Self::CreatedAt => ColumnType::DateTime.def().null(),
             Self::UpdatedAt => ColumnType::DateTime.def().null(),
+            Self::NotifyAt => ColumnType::DateTime.def().null(),
             Self::DeletedAt => ColumnType::DateTime.def().null(),
         }
     }
