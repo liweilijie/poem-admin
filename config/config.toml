@@ -11,13 +11,13 @@ content_gzip = true
 cache_time = 10
 api_prefix = "/api"
 [web]
-dir = "data/_web"
+dir = "data/dist"
 index = "index.html"
 upload_dir = "data/upload"
 upload_url= "upload"
 [cert]
-cert = "config/cert/cert.pem"
-key = "config/cert/key.pem"
+cert = "config/cert/emacsvi.com.cer"
+key = "config/cert/emacsvi.com.key"
 [casbin]
 model_file = "config/casbin_conf/rbac_model.conf"
 policy_file = "config/casbin_conf/rbac_policy.csv"

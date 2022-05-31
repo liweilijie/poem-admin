@@ -17,6 +17,7 @@ use sea_orm::{
     ActiveModelTrait, ColumnTrait, Condition, ConnectionTrait, DatabaseConnection, EntityTrait, JoinType, ModelTrait, Order, PaginatorTrait, QueryFilter, QueryOrder, QuerySelect,
     Set, TransactionTrait,
 };
+use tracing::info;
 
 use super::super::service;
 use crate::utils;
@@ -298,6 +299,7 @@ pub async fn get_all_enabled_menu_tree(db: &DatabaseConnection) -> Result<Vec<Sy
 //  获取角色对应的api 和 api id
 // 返回结果(Vec<String>, Vec<String>) 为（apis,api_ids）
 pub async fn get_role_permissions(db: &DatabaseConnection, role_id: &str) -> Result<(Vec<String>, Vec<String>)> {
+    info!("get role permissions:{}", role_id);
     let s = SysMenu::find()
         .join_rev(
             JoinType::InnerJoin,
@@ -313,6 +315,7 @@ pub async fn get_role_permissions(db: &DatabaseConnection, role_id: &str) -> Res
         apis.push(x.api.clone());
         api_ids.push(x.id.clone());
     }
+    info!("apis:{:?}, api_ids:{:?}", apis, api_ids);
     Ok((apis, api_ids))
 }
 

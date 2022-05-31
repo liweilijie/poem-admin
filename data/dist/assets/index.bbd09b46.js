@@ -1,0 +1,1 @@
+const e={setup(e){const u=VueRouter.useRoute(),t=VueRouter.useRouter(),{params:r,query:o}=u,{path:a}=r;return t.replace({path:"/"+a,query:o}),(e,u)=>(Vue.openBlock(),Vue.createElementBlock("div"))}};export{e as default};
