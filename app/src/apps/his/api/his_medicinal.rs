@@ -501,3 +501,18 @@ fn remove_whitespace(s: &str) -> String {
     s.chars().filter(|c| !c.is_whitespace()).collect()
 }
 
+
+mod tests {
+    use super::*;
+    use tracing::info;
+
+    #[tokio::test]
+    async fn test_load_csv_file() {
+        tracing_subscriber::fmt::init();
+        let file = "/Users/liwei/poem/poem-admin/data/upload/t2.csv";
+        match load_csv_file(file).await {
+            Ok((v,_,v1,v2)) => info!("result:{},{},{}", v, v1, v2),
+            Err(e) => info!("error:{}", e),
+        }
+    }
+}
